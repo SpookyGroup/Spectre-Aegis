@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AO-7 Hydra — Games Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #020617;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 1rem;
+    }
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 0.25rem;
+    }
+    .subtitle {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-bottom: 1rem;
+    }
+    .buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    button {
+      border: none;
+      border-radius: 9999px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: #1f2937;
+      color: #e5e7eb;
+    }
+    button.active {
+      background: #22c55e;
+      color: #020617;
+      font-weight: 600;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    #status {
+      font-size: 0.8rem;
+      margin-bottom: 0.5rem;
+      color: #9ca3af;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      border: 1px solid rgba(55, 65, 81, 0.8);
+    }
+    .row-main {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.25rem;
+    }
+    .teams {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .time {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      text-align: right;
+    }
+    .book {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-bottom: 0.25rem;
+    }
+    .prices {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+    }
+    .tag {
+      font-size: 0.7rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      margin-left: 0.35rem;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <h1>AO-7 HYDRA • Odds Pulse</h1>
+  <div class="subtitle">
+    Tap a league → Hydra pulls from Supabase Edge → Odds as readable cards.
+  </div>
+
+  <div class="buttons">
+    <button data-league="americanfootball_nfl" class="active">NFL</button>
+    <button data-league="basketball_nba">NBA</button>
+    <button data-league="icehockey_nhl">NHL</button>
+    <button id="refreshBtn">Refresh</button>
+  </div>
+
+  <div id="status">Ready.</div>
+  <div id="output"></div>
+
+  <script>
+    // 🔹 EDIT THESE TWO LINES ONLY 🔹
+    const SUPABASE_URL = "https://hirdyxhsasanaryazvko.supabase.co/functions/v1/check-upcoming-games";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpcmR5eGhzYXNhbmFyeWF6dmtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNTYxNjMsImV4cCI6MjA3ODgzMjE2M30.uWbzwuTA1eY1pHs-OELVjD0LNHQ_xIoN_lUrXwgGHyg";
+    // 🔹 STOP EDITING 🔹
+
+    const statusEl = document.getElementById("status");
+    const outputEl = document.getElementById("output");
+    const buttons = document.querySelectorAll("button[data-league]");
+    const refreshBtn = document.getElementById("refreshBtn");
+
+    let currentLeague = "americanfootball_nfl";
+
+    function setStatus(msg) {
+      statusEl.textContent = msg;
+    }
+
+    function toLocalTime(iso) {
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString();
+      } catch {
+        return iso;
+      }
+    }
+
+    function renderGames(games) {
+      if (!games || games.length === 0) {
+        outputEl.innerHTML = "<div>No games returned.</div>";
+        return;
+      }
+
+      let html = "";
+      for (const g of games) {
+        const home = g.home_team;
+        const away = g.away_team;
+        const when = toLocalTime(g.commence_time);
+
+        // Use first bookmaker as "headline" book
+        const book = (g.bookmakers && g.bookmakers[0]) || null;
+        let bookTitle = book ? book.title : "Book";
+        let homePrice = "?";
+        let awayPrice = "?";
+
+        if (book && book.markets) {
+          const h2h = book.markets.find(m => m.key === "h2h");
+          if (h2h && h2h.outcomes) {
+            const homeOutcome = h2h.outcomes.find(o => o.name === home);
+            const awayOutcome = h2h.outcomes.find(o => o.name === away);
+            if (homeOutcome) homePrice = homeOutcome.price;
+            if (awayOutcome) awayPrice = awayOutcome.price;
+          }
+        }
+
+        html += `
+          <div class="card">
+            <div class="row-main">
+              <div class="teams">
+                ${away} @ ${home}
+                <span class="tag">${g.sport_title || ""}</span>
+              </div>
+              <div class="time">${when}</div>
+            </div>
+            <div class="book">${bookTitle} • Moneyline</div>
+            <div class="prices">
+              <div>Home (${home}): <strong>${homePrice}</strong></div>
+              <div>Away (${away}): <strong>${awayPrice}</strong></div>
+            </div>
+          </div>
+        `;
+      }
+
+      outputEl.innerHTML = html;
+    }
+
+    async function fetchGames(league) {
+      currentLeague = league;
+      setStatus("Pulling odds from Hydra engine…");
+
+      buttons.forEach(b => {
+        b.disabled = true;
+        b.classList.toggle("active", b.dataset.league === league);
+      });
+      refreshBtn.disabled = true;
+
+      try {
+        const res = await fetch(SUPABASE_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": "Bearer " + SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({ league })
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          setStatus("Error " + res.status + " from Supabase.");
+          outputEl.textContent = text;
+          return;
+        }
+
+        const data = await res.json();
+        renderGames(data.games || []);
+        setStatus("OK • " + league + " • " + (data.games ? data.games.length : 0) + " games.");
+      } catch (err) {
+        setStatus("Fetch error.");
+        outputEl.textContent = String(err);
+      } finally {
+        buttons.forEach(b => (b.disabled = false));
+        refreshBtn.disabled = false;
+      }
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const league = btn.dataset.league;
+        fetchGames(league);
+      });
+    });
+
+    refreshBtn.addEventListener("click", () => {
+      fetchGames(currentLeague);
+    });
+
+    // Initial load
+    fetchGames(currentLeague);
+  </script>
+</body>
+</html>
