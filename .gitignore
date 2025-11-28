@@ -1,0 +1,37 @@
+# === General ===
+*.log
+*.tmp
+*.swp
+*.bak
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+.env.*
+
+# Node (if we ever add it)
+node_modules/
+npm-debug.log*
+yarn.lock
+pnpm-lock.yaml
+
+# Hydra outputs & scratch
+HYDRA/out/
+hydra/out/
+out/
+tmp/
+logs/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace
