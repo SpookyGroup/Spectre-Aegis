@@ -35,3 +35,19 @@ logs/
 .vscode/
 .idea/
 *.code-workspace
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+
+# Virtual envs (if you ever make one here)
+.venv/
+venv/
+
+# Logs and temp
+logs/
+tmp/
+
+# OS / editor noise
+.DS_Store
+*.swp
+*~
