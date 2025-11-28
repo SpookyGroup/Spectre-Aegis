@@ -1,0 +1,20 @@
+name: AO-7 CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: AO-7 heartbeat
+        run: |
+          echo "Spectre-Aegis heartbeat OK"
+          echo "Branch: $GITHUB_REF"
+          ls -R
