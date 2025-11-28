@@ -1,0 +1,31 @@
+name: AO-7 Ops
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # every 30 minutes
+  workflow_dispatch:
+
+jobs:
+  ops:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Ping Hydra module
+        run: |
+          bash hydra/hydra_ping.sh || echo "Ping failed"
+
+      - name: Log ops output
+        run: |
+          mkdir -p logs/
+          echo "$(date) - Ops ran" >> logs/ops.log
+
+      - name: Commit Ops logs
+        run: |
+          git config --global user.name "Echo-AO7"
+          git config --global user.email "spectreaegisexecutive@proton.me"
+          git add logs/ops.log || true
+          git commit -m "AO-7 ops log update" || true
+          git push
