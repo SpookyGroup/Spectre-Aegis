@@ -1,0 +1,27 @@
+name: Hydra Daily Run
+
+on:
+  schedule:
+    - cron: "0 12 * * *"   # runs once per day at 12:00 UTC
+  workflow_dispatch:
+
+jobs:
+  run-daily:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Run HYDRA daily script
+        run: |
+          bash hydra/hydra_daily.py || echo "Hydra daily failed"
+
+      - name: Commit daily results
+        run: |
+          git config --global user.name "Echo-AO7"
+          git config --global user.email "spectreaegisexecutive@proton.me"
+          git add dashboards/hydra/ || true
+          git add hydra/out/ || true
+          git commit -m "Daily Hydra results" || true
+          git push
