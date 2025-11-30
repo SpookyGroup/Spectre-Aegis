@@ -1,0 +1,27 @@
+name: Hydra Weekly Sweep
+
+on:
+  schedule:
+    - cron: "0 9 * * MON" # every Monday at 09:00 UTC
+  workflow_dispatch:
+
+jobs:
+  run-weekly:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Run HYDRA weekly script
+        run: |
+          bash hydra/hydra_weekly.py || echo "Hydra weekly failed"
+
+      - name: Commit weekly results
+        run: |
+          git config --global user.name "Echo-AO7"
+          git config --global user.email "spectreaegisexecutive@proton.me"
+          git add dashboards/hydra/ || true
+          git add hydra/out/ || true
+          git commit -m "Weekly Hydra results" || true
+          git push
