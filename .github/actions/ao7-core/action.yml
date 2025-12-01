@@ -1,0 +1,7 @@
+name: "AO-7 Core Executor"
+description: "Unified executor for Hydra, Labyrinth, Catalyst and AO-7 pipelines"
+runs:
+  using: "composite"
+  steps:
+    - run: echo "AO-7 Core Executor Online"
+      shell: bash
