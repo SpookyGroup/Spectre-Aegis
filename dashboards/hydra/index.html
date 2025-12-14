@@ -104,16 +104,30 @@
     <button data-league="basketball_nba">NBA</button>
     <button data-league="icehockey_nhl">NHL</button>
     <button id="refreshBtn">Refresh</button>
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-left:0.5rem">
+      <div style="font-size:0.8rem;color:#9ca3af">Mode:</div>
+      <button id="modeMock">Mock</button>
+      <button id="modeLive">Live</button>
+      <div id="modeBadge" style="margin-left:0.5rem;padding:0.15rem 0.45rem;border-radius:9999px;color:#020617;font-weight:700;background:#10b981">LIVE</div>
+    </div>
   </div>
 
   <div id="status">Ready.</div>
   <div id="output"></div>
 
   <script>
-    // 🔹 EDIT THESE TWO LINES ONLY 🔹
-    const SUPABASE_URL = "https://hirdyxhsasanaryazvko.supabase.co/functions/v1/check-upcoming-games";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpcmR5eGhzYXNhbmFyeWF6dmtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNTYxNjMsImV4cCI6MjA3ODgzMjE2M30.uWbzwuTA1eY1pHs-OELVjD0LNHQ_xIoN_lUrXwgGHyg";
-    // 🔹 STOP EDITING 🔹
+    // Default Supabase Edge Function — override below with query params if needed
+    let SUPABASE_URL = "https://hirdyxhsasanaryazvko.supabase.co/functions/v1/check-upcoming-games";
+    // No hardcoded key here — prefer query param (`supabase_key`) or localStorage `hydra_supabase_key`
+    let SUPABASE_ANON_KEY = "";
+
+    // Overrides (for demo/dev): use query params `supabase_url`, `supabase_key`, or `mock=1`
+    const _params = new URLSearchParams(window.location.search);
+    const overrideUrl = _params.get('supabase_url');
+    const overrideKey = _params.get('supabase_key');
+    const USE_MOCK = _params.get('mock') === '1' || _params.get('mock') === 'true';
+    if (overrideUrl) SUPABASE_URL = overrideUrl;
+    if (overrideKey) SUPABASE_ANON_KEY = overrideKey;
 
     const statusEl = document.getElementById("status");
     const outputEl = document.getElementById("output");
@@ -133,6 +147,24 @@
       } catch {
         return iso;
       }
+    }
+
+    // Read persisted mode (mock/live) and overrides (localStorage)
+    function readConfig() {
+      const persistedMode = localStorage.getItem('hydra_mode');
+      const mode = persistedMode || (USE_MOCK ? 'mock' : 'live');
+      const storedUrl = localStorage.getItem('hydra_supabase_url');
+      const storedKey = localStorage.getItem('hydra_supabase_key');
+      if (storedUrl) SUPABASE_URL = storedUrl;
+      if (storedKey) SUPABASE_ANON_KEY = storedKey;
+      return { mode };
+    }
+
+    function setModeBadge(mode) {
+      const badge = document.getElementById('modeBadge');
+      if (!badge) return;
+      badge.textContent = mode === 'mock' ? 'MOCK' : 'LIVE';
+      badge.style.background = mode === 'mock' ? '#ef4444' : '#10b981';
     }
 
     function renderGames(games) {
@@ -186,6 +218,8 @@
 
     async function fetchGames(league) {
       currentLeague = league;
+      const cfg = readConfig();
+      setModeBadge(cfg.mode);
       setStatus("Pulling odds from Hydra engine…");
 
       buttons.forEach(b => {
@@ -195,6 +229,21 @@
       refreshBtn.disabled = true;
 
       try {
+        if (cfg.mode === 'mock') {
+          setStatus("Loading mock data…");
+          const mockRes = await fetch('mock_games.json');
+          if (!mockRes.ok) {
+            const t = await mockRes.text();
+            setStatus('Error loading mock file');
+            outputEl.textContent = t;
+            return;
+          }
+          const mockData = await mockRes.json();
+          renderGames(mockData.games || []);
+          setStatus('OK • MOCK • ' + (mockData.games ? mockData.games.length : 0) + ' games.');
+          return;
+        }
+
         const res = await fetch(SUPABASE_URL, {
           method: "POST",
           headers: {
@@ -216,8 +265,14 @@
         renderGames(data.games || []);
         setStatus("OK • " + league + " • " + (data.games ? data.games.length : 0) + " games.");
       } catch (err) {
-        setStatus("Fetch error.");
-        outputEl.textContent = String(err);
+        const msg = String(err || '');
+        if (/failed to fetch/i.test(msg)) {
+          setStatus('Fetch error (likely CORS or network).');
+          outputEl.textContent = 'Failed to fetch — try adding ?mock=1 to demo locally, or verify the Supabase Edge Function URL and CORS settings.\n\n' + msg;
+        } else {
+          setStatus('Fetch error.');
+          outputEl.textContent = msg;
+        }
       } finally {
         buttons.forEach(b => (b.disabled = false));
         refreshBtn.disabled = false;
@@ -234,6 +289,32 @@
     refreshBtn.addEventListener("click", () => {
       fetchGames(currentLeague);
     });
+
+    // Mode controls
+    const modeMockBtn = document.getElementById('modeMock');
+    const modeLiveBtn = document.getElementById('modeLive');
+    modeMockBtn.addEventListener('click', () => {
+      localStorage.setItem('hydra_mode', 'mock');
+      setModeBadge('mock');
+      fetchGames(currentLeague);
+    });
+    modeLiveBtn.addEventListener('click', () => {
+      localStorage.setItem('hydra_mode', 'live');
+      setModeBadge('live');
+      fetchGames(currentLeague);
+    });
+
+    // Initialize mode UI from stored config
+    (function initModeUI(){
+      const cfg = readConfig();
+      setModeBadge(cfg.mode);
+      const persistedMode = cfg.mode;
+      if (persistedMode === 'mock') {
+        document.getElementById('modeMock').classList.add('active');
+      } else {
+        document.getElementById('modeLive').classList.add('active');
+      }
+    })();
 
     // Initial load
     fetchGames(currentLeague);

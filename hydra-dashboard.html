@@ -110,10 +110,18 @@
   <div id="output"></div>
 
   <script>
-    // 🔹 EDIT THESE TWO LINES ONLY 🔹
-    const SUPABASE_URL = "https://hirdyxhsasanaryazvko.supabase.co/functions/v1/check-upcoming-games";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpcmR5eGhzYXNhbmFyeWF6dmtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNTYxNjMsImV4cCI6MjA3ODgzMjE2M30.uWbzwuTA1eY1pHs-OELVjD0LNHQ_xIoN_lUrXwgGHyg";
-    // 🔹 STOP EDITING 🔹
+    // Default Supabase Edge Function — override below with query params if needed
+    let SUPABASE_URL = "https://hirdyxhsasanaryazvko.supabase.co/functions/v1/check-upcoming-games";
+    // No hardcoded key here — prefer query param (`supabase_key`) or localStorage `hydra_supabase_key`
+    let SUPABASE_ANON_KEY = "";
+
+    // Overrides (for demo/dev): use query params `supabase_url`, `supabase_key`, or `mock=1`
+    const _params = new URLSearchParams(window.location.search);
+    const overrideUrl = _params.get('supabase_url');
+    const overrideKey = _params.get('supabase_key');
+    const USE_MOCK = _params.get('mock') === '1' || _params.get('mock') === 'true';
+    if (overrideUrl) SUPABASE_URL = overrideUrl;
+    if (overrideKey) SUPABASE_ANON_KEY = overrideKey;
 
     const statusEl = document.getElementById("status");
     const outputEl = document.getElementById("output");
@@ -133,6 +141,16 @@
       } catch {
         return iso;
       }
+    }
+
+    function readConfig() {
+      const persistedMode = localStorage.getItem('hydra_mode');
+      const mode = persistedMode || (USE_MOCK ? 'mock' : 'live');
+      const storedUrl = localStorage.getItem('hydra_supabase_url');
+      const storedKey = localStorage.getItem('hydra_supabase_key');
+      if (storedUrl) SUPABASE_URL = storedUrl;
+      if (storedKey) SUPABASE_ANON_KEY = storedKey;
+      return { mode };
     }
 
     function renderGames(games) {
@@ -186,6 +204,7 @@
 
     async function fetchGames(league) {
       currentLeague = league;
+      const cfg = readConfig();
       setStatus("Pulling odds from Hydra engine…");
 
       buttons.forEach(b => {
@@ -195,6 +214,21 @@
       refreshBtn.disabled = true;
 
       try {
+        if (cfg.mode === 'mock') {
+          setStatus("Loading mock data…");
+          const mockRes = await fetch('dashboards/hydra/mock_games.json');
+          if (!mockRes.ok) {
+            const t = await mockRes.text();
+            setStatus('Error loading mock file');
+            outputEl.textContent = t;
+            return;
+          }
+          const mockData = await mockRes.json();
+          renderGames(mockData.games || []);
+          setStatus('OK • MOCK • ' + (mockData.games ? mockData.games.length : 0) + ' games.');
+          return;
+        }
+
         const res = await fetch(SUPABASE_URL, {
           method: "POST",
           headers: {
@@ -216,8 +250,14 @@
         renderGames(data.games || []);
         setStatus("OK • " + league + " • " + (data.games ? data.games.length : 0) + " games.");
       } catch (err) {
-        setStatus("Fetch error.");
-        outputEl.textContent = String(err);
+        const msg = String(err || '');
+        if (/failed to fetch/i.test(msg)) {
+          setStatus('Fetch error (likely CORS or network).');
+          outputEl.textContent = 'Failed to fetch — try adding ?mock=1 to demo locally, or verify the Supabase Edge Function URL and CORS settings.\n\n' + msg;
+        } else {
+          setStatus('Fetch error.');
+          outputEl.textContent = msg;
+        }
       } finally {
         buttons.forEach(b => (b.disabled = false));
         refreshBtn.disabled = false;

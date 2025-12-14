@@ -1,0 +1,44 @@
+{
+  "games": [
+    {
+      "home_team": "Patriots",
+      "away_team": "Giants",
+      "commence_time": "2025-12-20T20:00:00Z",
+      "sport_title": "American Football",
+      "bookmakers": [
+        {
+          "title": "MockBook",
+          "markets": [
+            {
+              "key": "h2h",
+              "outcomes": [
+                { "name": "Patriots", "price": 1.8 },
+                { "name": "Giants", "price": 2.1 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "home_team": "Lakers",
+      "away_team": "Celtics",
+      "commence_time": "2025-12-21T01:00:00Z",
+      "sport_title": "Basketball",
+      "bookmakers": [
+        {
+          "title": "MockLines",
+          "markets": [
+            {
+              "key": "h2h",
+              "outcomes": [
+                { "name": "Lakers", "price": 1.95 },
+                { "name": "Celtics", "price": 1.95 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

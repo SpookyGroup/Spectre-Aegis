@@ -1,0 +1,11 @@
+{
+  "name": "hydra-e2e",
+  "private": true,
+  "scripts": {
+    "test": "node run.js"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "puppeteer": "^21.4.1"
+  }
+}

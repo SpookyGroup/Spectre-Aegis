@@ -1,0 +1,17 @@
+﻿apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aegis-ing
+  namespace: ao7-dev
+spec:
+  rules:
+    - host: aegis.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aegis-svc
+                port:
+                  number: 80

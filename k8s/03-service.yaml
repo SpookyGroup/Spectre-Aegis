@@ -1,0 +1,12 @@
+﻿apiVersion: v1
+kind: Service
+metadata:
+  name: aegis-svc
+  namespace: ao7-dev
+spec:
+  selector:
+    app: aegis
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
