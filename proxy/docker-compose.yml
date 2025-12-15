@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  proxy:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MOCK_UPSTREAM=1
+      - MOCK_DELAY_MS=50
+      - CACHE_TTL=2
+    restart: unless-stopped
+    volumes:
+      - ./:/app:ro

@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: hydra-proxy
+    env: node
+    plan: free
+    buildCommand: "npm ci && npm run build || true"
+    startCommand: "npm start"
+    envVars:
+      - key: SUPABASE_URL
+        value: ""
+      - key: SUPABASE_KEY
+        value: ""
+      - key: ALLOWED_BACKENDS
+        value: ""
+    httpPort: 3000

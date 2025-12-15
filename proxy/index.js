@@ -6,6 +6,8 @@ app.use(express.json());
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const MOCK_UPSTREAM = process.env.MOCK_UPSTREAM === '1' || process.env.MOCK_UPSTREAM === 'true';
+const MOCK_DELAY_MS = parseInt(process.env.MOCK_DELAY_MS || '0', 10);
 const ALLOWED_BACKENDS = (process.env.ALLOWED_BACKENDS || '').split(',').map(s => s.trim()).filter(Boolean);
 const CACHE_TTL = parseInt(process.env.CACHE_TTL || '20', 10); // seconds
 const RATE_LIMIT_WINDOW = parseInt(process.env.RATE_LIMIT_WINDOW || '60', 10); // seconds
@@ -18,6 +20,20 @@ if (!SUPABASE_URL) {
 // In-memory cache and rate limit stores (sufficient for small-scale or demo)
 const cache = new Map();
 const rateStore = new Map();
+
+let mockData = null;
+if (MOCK_UPSTREAM) {
+  try {
+    const path = require('path');
+    const fs = require('fs');
+    const mockPath = path.resolve(__dirname, '..', 'dashboards', 'hydra', 'mock_games.json');
+    const raw = fs.readFileSync(mockPath, 'utf8');
+    mockData = JSON.parse(raw);
+    console.log('Proxy running in MOCK_UPSTREAM mode, serving', (mockData && mockData.games && mockData.games.length) || 0, 'games');
+  } catch (e) {
+    console.warn('Failed to load mock data for MOCK_UPSTREAM mode', e && e.message);
+  }
+}
 
 // Basic CORS allowing all origins for demo. For production, restrict origins.
 app.use((req, res, next) => {
@@ -57,6 +73,13 @@ app.use((req, res, next) => {
 
 app.post('/api/check-upcoming-games', async (req, res) => {
   try {
+    if (MOCK_UPSTREAM) {
+      // quick, predictable mock response for CI and local dev
+      if (MOCK_DELAY_MS) await new Promise(r => setTimeout(r, MOCK_DELAY_MS));
+      const body = JSON.stringify(mockData || { games: [] });
+      res.setHeader('content-type', 'application/json');
+      return res.status(200).send(body);
+    }
     const url = SUPABASE_URL || (req.body && req.body.url);
     if (!url) return res.status(400).json({ error: 'No SUPABASE_URL configured.' });
 

@@ -19,10 +19,29 @@ jobs:
         run: |
           cd tests
           npm ci
+      - name: Build and start proxy (mock)
+        run: |
+          docker build -t hydra-proxy ./proxy
+          docker run -d --name hydra-proxy -p 3000:3000 -e MOCK_UPSTREAM=1 hydra-proxy
+      - name: Wait for proxy health
+        run: |
+          for i in $(seq 1 20); do
+            if curl -sSf http://localhost:3000/health >/dev/null 2>&1; then
+              echo proxy healthy; break;
+            fi
+            sleep 1
+          done
       - name: Run E2E tests
         run: |
           cd tests
           npm test
+      - name: Tear down proxy container
+        if: always()
+        run: |
+          set -eux
+          docker ps -a --filter "name=hydra-proxy" --format "{{.ID}} {{.Status}}" || true
+          docker stop hydra-proxy || true
+          docker rm hydra-proxy || true
 
   deploy:
     needs: test
