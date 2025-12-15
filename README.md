@@ -18,3 +18,8 @@ It contains:
 - Space for Sentinel, AEGIS, Catalyst, Labyrinth modules
 
 This repository is Commander Payne’s official development ground for all future AO-7 operations.
+
+Developer tools
+---------------
+- We recommend installing the BLACKBOXAI VS Code extensions for faster iteration: search for `BLACKBOXAI` in the Extensions view and sign in to your Blackbox account from the extension's sidebar. The extensions are optional but helpful for code completion, refactoring, and agent features.
+- Note: workspace `.vscode` settings are intentionally not committed; add your local preferences and extension recommendations to your editor to enable them for your environment.
