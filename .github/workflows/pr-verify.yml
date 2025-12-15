@@ -1,0 +1,60 @@
+name: PR Verification (proxy + E2E)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build proxy image
+        run: |
+          docker build -t hydra-proxy ./proxy
+
+      - name: Start proxy (mock)
+        run: |
+          docker run -d --name hydra-proxy -p 3000:3000 -e MOCK_UPSTREAM=1 hydra-proxy
+
+      - name: Wait for proxy health
+        run: |
+          for i in $(seq 1 20); do
+            if curl -sSf http://localhost:3000/health >/dev/null 2>&1; then
+              echo "proxy healthy"; exit 0;
+            fi
+            sleep 1
+          done
+          echo "proxy did not become healthy"; exit 2
+
+      - name: Run E2E tests
+        run: |
+          cd tests
+          npm ci
+          npm test
+        continue-on-error: true
+
+      - name: Determine result and annotate PR
+        id: annotate
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const passed = (process.exitCode === 0);
+            const text = passed ? '✅ Verification passed: proxy started and E2E tests completed.' : '❌ Verification failed: see job logs for details.';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const comment = `${text}\n\nLogs: ${runUrl}`;
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body: comment });
+
+      - name: Tear down proxy
+        if: always()
+        run: |
+          docker stop hydra-proxy || true
+          docker rm hydra-proxy || true

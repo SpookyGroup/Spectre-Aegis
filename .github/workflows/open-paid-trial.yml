@@ -1,0 +1,34 @@
+name: "Open Paid Trial Issue"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  open_issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Paid Trial issue
+        id: create
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('./docs/PAID_TRIAL.md', 'utf8');
+            const title = 'Paid Trial: Start proxy container in CI, wait for /health, run E2E tests';
+            const labels = ['paid-trial','help wanted'];
+            const issue = await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels });
+            return issue.data.number;
+
+      - name: Add comment with next steps
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issue_number = parseInt('${{ steps.create.outputs.result || "" }}') || undefined;
+            if (!issue_number) return;
+            const comment = `This is an automated paid-trial issue. If you'd like me to monitor submissions, reply with **@maintainer watch** and I'll watch incoming PRs and run verification steps.`;
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number, body: comment });

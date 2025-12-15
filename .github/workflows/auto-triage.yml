@@ -1,0 +1,23 @@
+name: Auto-triage for paid-trial
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check comment for watch command
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const body = context.payload.comment.body || '';
+            const issue_number = context.payload.issue.number;
+            if (/@maintainer\s+watch/i.test(body) || /@blackbox\s+watch/i.test(body)) {
+              await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number, labels: ['monitoring'] });
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number, body: 'Okay — I will monitor this paid-trial and auto-run verification for incoming PRs. Add the label `needs-maintainer` if you need a human maintainer to step in.' });
+            }
