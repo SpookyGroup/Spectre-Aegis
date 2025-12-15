@@ -37,3 +37,8 @@ If you don't want to install Node locally, you can run the proxy and E2E tests u
 ```
 
 This brings up the proxy in MOCK_UPSTREAM mode and runs the E2E test inside a Node container, then tears down the proxy.
+
+Paid Trial
+----------
+
+We maintain a small paid-trial task to validate CI and onboarding for short-contract contributors. See [docs/PAID_TRIAL.md](docs/PAID_TRIAL.md) for details and acceptance criteria. Use the issue template when creating a candidate entry (choose "Paid Trial" from issue templates).
