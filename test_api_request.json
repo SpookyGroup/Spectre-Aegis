@@ -1,0 +1,38 @@
+{
+  "game": {
+    "id": "test_game_1",
+    "sport_key": "americanfootball_nfl",
+    "sport_title": "NFL",
+    "commence_time": "2025-12-21T18:00:00Z",
+    "home_team": "Kansas City Chiefs",
+    "away_team": "Buffalo Bills",
+    "bookmakers": [
+      {
+        "title": "DraftKings",
+        "markets": [
+          {
+            "key": "h2h",
+            "outcomes": [
+              {"name": "Kansas City Chiefs", "price": 1.85},
+              {"name": "Buffalo Bills", "price": 2.10}
+            ]
+          }
+        ]
+      },
+      {
+        "title": "FanDuel",
+        "markets": [
+          {
+            "key": "h2h",
+            "outcomes": [
+              {"name": "Kansas City Chiefs", "price": 1.90},
+              {"name": "Buffalo Bills", "price": 2.05}
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "include_simulation": true,
+  "include_arbitrage": true
+}

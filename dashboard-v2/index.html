@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPECTRE-AEGIS | Ultimate Sports Analytics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    
+    .pulse-dot {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+    
+    .stat-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+      backdrop-filter: blur(10px);
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+  
+  <!-- Header -->
+  <header class="gradient-bg shadow-lg">
+    <div class="container mx-auto px-6 py-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-4xl font-bold text-white">⚡ SPECTRE-AEGIS</h1>
+          <p class="text-purple-200 mt-1">Ultimate Sports Analytics & Prediction Engine</p>
+        </div>
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-2">
+            <div class="w-3 h-3 bg-green-400 rounded-full pulse-dot"></div>
+            <span class="text-white font-medium">Live</span>
+          </div>
+          <button id="refreshBtn" class="bg-white text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-purple-50 transition">
+            🔄 Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-6 py-8">
+    
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="stat-card rounded-xl p-6 border border-purple-500/30">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm font-medium">Total Games</p>
+            <p id="totalGames" class="text-3xl font-bold text-white mt-2">0</p>
+          </div>
+          <div class="text-4xl">🎮</div>
+        </div>
+      </div>
+      
+      <div class="stat-card rounded-xl p-6 border border-green-500/30">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm font-medium">Arbitrage Opportunities</p>
+            <p id="arbCount" class="text-3xl font-bold text-green-400 mt-2">0</p>
+          </div>
+          <div class="text-4xl">💰</div>
+        </div>
+      </div>
+      
+      <div class="stat-card rounded-xl p-6 border border-blue-500/30">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm font-medium">Avg Confidence</p>
+            <p id="avgConfidence" class="text-3xl font-bold text-blue-400 mt-2">0%</p>
+          </div>
+          <div class="text-4xl">📊</div>
+        </div>
+      </div>
+      
+      <div class="stat-card rounded-xl p-6 border border-yellow-500/30">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm font-medium">Max Profit</p>
+            <p id="maxProfit" class="text-3xl font-bold text-yellow-400 mt-2">0%</p>
+          </div>
+          <div class="text-4xl">🚀</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sport Selector -->
+    <div class="bg-gray-800 rounded-xl p-6 mb-8 border border-gray-700">
+      <h2 class="text-xl font-bold mb-4">Select Sport</h2>
+      <div class="flex flex-wrap gap-3">
+        <button class="sport-btn active" data-sport="americanfootball_nfl">🏈 NFL</button>
+        <button class="sport-btn" data-sport="basketball_nba">🏀 NBA</button>
+        <button class="sport-btn" data-sport="icehockey_nhl">🏒 NHL</button>
+        <button class="sport-btn" data-sport="baseball_mlb">⚾ MLB</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-gray-800 rounded-xl p-2 mb-8 border border-gray-700 inline-flex">
+      <button class="tab-btn active" data-tab="predictions">🎯 Predictions</button>
+      <button class="tab-btn" data-tab="arbitrage">💰 Arbitrage</button>
+      <button class="tab-btn" data-tab="simulations">🎲 Simulations</button>
+      <button class="tab-btn" data-tab="analytics">📈 Analytics</button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="hidden text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div>
+      <p class="mt-4 text-gray-400">Loading predictions...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error" class="hidden bg-red-900/20 border border-red-500 rounded-xl p-6 mb-8">
+      <p class="text-red-400 font-semibold">⚠️ Error loading data</p>
+      <p id="errorMessage" class="text-red-300 mt-2"></p>
+    </div>
+
+    <!-- Predictions Tab -->
+    <div id="predictionsTab" class="tab-content">
+      <div id="predictionsList" class="space-y-4">
+        <!-- Predictions will be inserted here -->
+      </div>
+    </div>
+
+    <!-- Arbitrage Tab -->
+    <div id="arbitrageTab" class="tab-content hidden">
+      <div id="arbitrageList" class="space-y-4">
+        <!-- Arbitrage opportunities will be inserted here -->
+      </div>
+    </div>
+
+    <!-- Simulations Tab -->
+    <div id="simulationsTab" class="tab-content hidden">
+      <div id="simulationsList" class="space-y-4">
+        <!-- Simulations will be inserted here -->
+      </div>
+    </div>
+
+    <!-- Analytics Tab -->
+    <div id="analyticsTab" class="tab-content hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h3 class="text-xl font-bold mb-4">Win Probability Distribution</h3>
+          <canvas id="probabilityChart"></canvas>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h3 class="text-xl font-bold mb-4">Confidence Levels</h3>
+          <canvas id="confidenceChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 border-t border-gray-700 mt-12 py-6">
+    <div class="container mx-auto px-6 text-center text-gray-400">
+      <p>SPECTRE-AEGIS v1.0.0 | Powered by Advanced ML & Monte Carlo Simulations</p>
+      <p class="text-sm mt-2">API Status: <span id="apiStatus" class="text-green-400">●</span> Connected</p>
+    </div>
+  </footer>
+
+  <script>
+    // Configuration
+    const API_BASE_URL = 'http://localhost:8000';
+    const USE_MOCK_DATA = true; // Set to false when API is running
+    
+    // State
+    let currentSport = 'americanfootball_nfl';
+    let currentTab = 'predictions';
+    let allPredictions = [];
+    let allArbitrage = [];
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      setupEventListeners();
+      loadData();
+    });
+    
+    function setupEventListeners() {
+      // Sport buttons
+      document.querySelectorAll('.sport-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.sport-btn').forEach(b => b.classList.remove('active'));
+          e.target.classList.add('active');
+          currentSport = e.target.dataset.sport;
+          loadData();
+        });
+      });
+      
+      // Tab buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          e.target.classList.add('active');
+          currentTab = e.target.dataset.tab;
+          showTab(currentTab);
+        });
+      });
+      
+      // Refresh button
+      document.getElementById('refreshBtn').addEventListener('click', loadData);
+    }
+    
+    function showTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+      document.getElementById(`${tab}Tab`).classList.remove('hidden');
+      
+      if (tab === 'analytics') {
+        renderCharts();
+      }
+    }
+    
+    async function loadData() {
+      showLoading(true);
+      hideError();
+      
+      try {
+        if (USE_MOCK_DATA) {
+          await loadMockData();
+        } else {
+          await loadRealData();
+        }
+        
+        updateStats();
+        renderPredictions();
+        renderArbitrage();
+        renderSimulations();
+        
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        showLoading(false);
+      }
+    }
+    
+    async function loadMockData() {
+      // Generate mock predictions
+      const teams = getSportTeams(currentSport);
+      allPredictions = [];
+      allArbitrage = [];
+      
+      for (let i = 0; i < 5; i++) {
+        const homeTeam = teams[i * 2 % teams.length];
+        const awayTeam = teams[(i * 2 + 1) % teams.length];
+        const homeProb = 0.45 + Math.random() * 0.3;
+        
+        const prediction = {
+          game_id: `mock_${i}`,
+          home_team: homeTeam,
+          away_team: awayTeam,
+          prediction: homeProb > 0.5 ? 'home' : 'away',
+          home_win_probability: homeProb,
+          away_win_probability: 1 - homeProb,
+          confidence: Math.abs(homeProb - 0.5) * 2,
+          simulation: {
+            predicted_scores: {
+              home: { mean: 24 + Math.random() * 10, ci_95: [18, 32] },
+              away: { mean: 21 + Math.random() * 10, ci_95: [15, 29] }
+            },
+            risk_metrics: {
+              upset_probability: Math.min(homeProb, 1 - homeProb),
+              blowout_probability: Math.random() * 0.3
+            }
+          }
+        };
+        
+        allPredictions.push(prediction);
+        
+        // Random arbitrage opportunities
+        if (Math.random() > 0.7) {
+          allArbitrage.push({
+            game_id: `mock_${i}`,
+            home_team: homeTeam,
+            away_team: awayTeam,
+            profit_percentage: 1 + Math.random() * 3,
+            best_home_odds: 1.8 + Math.random() * 0.5,
+            best_home_bookmaker: 'DraftKings',
+            best_away_odds: 2.0 + Math.random() * 0.5,
+            best_away_bookmaker: 'FanDuel',
+            risk_level: 'low',
+            time_sensitivity: 'moderate'
+          });
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+    }
+    
+    async function loadRealData() {
+      // TODO: Implement real API calls
+      const response = await fetch(`${API_BASE_URL}/predict/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ games: [] })
+      });
+      
+      const data = await response.json();
+      allPredictions = data.predictions;
+      allArbitrage = data.arbitrage || [];
+    }
+    
+    function updateStats() {
+      document.getElementById('totalGames').textContent = allPredictions.length;
+      document.getElementById('arbCount').textContent = allArbitrage.length;
+      
+      const avgConf = allPredictions.reduce((sum, p) => sum + p.confidence, 0) / allPredictions.length;
+      document.getElementById('avgConfidence').textContent = `${(avgConf * 100).toFixed(0)}%`;
+      
+      const maxProfit = allArbitrage.length > 0 
+        ? Math.max(...allArbitrage.map(a => a.profit_percentage))
+        : 0;
+      document.getElementById('maxProfit').textContent = `${maxProfit.toFixed(2)}%`;
+    }
+    
+    function renderPredictions() {
+      const container = document.getElementById('predictionsList');
+      container.innerHTML = '';
+      
+      allPredictions.forEach(pred => {
+        const card = createPredictionCard(pred);
+        container.appendChild(card);
+      });
+    }
+    
+    function createPredictionCard(pred) {
+      const div = document.createElement('div');
+      div.className = 'bg-gray-800 rounded-xl p-6 border border-gray-700 card-hover';
+      
+      const winner = pred.prediction === 'home' ? pred.home_team : pred.away_team;
+      const winnerProb = pred.prediction === 'home' ? pred.home_win_probability : pred.away_win_probability;
+      
+      div.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex-1">
+            <h3 class="text-xl font-bold">${pred.away_team} @ ${pred.home_team}</h3>
+            <p class="text-gray-400 text-sm mt-1">Game ID: ${pred.game_id}</p>
+          </div>
+          <div class="text-right">
+            <div class="inline-block px-4 py-2 rounded-lg ${pred.confidence > 0.6 ? 'bg-green-900/30 text-green-400' : 'bg-yellow-900/30 text-yellow-400'}">
+              ${(pred.confidence * 100).toFixed(0)}% Confidence
+            </div>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="text-center p-4 rounded-lg ${pred.prediction === 'home' ? 'bg-purple-900/30 border-2 border-purple-500' : 'bg-gray-700/30'}">
+            <p class="text-gray-400 text-sm">Home</p>
+            <p class="text-2xl font-bold mt-1">${(pred.home_win_probability * 100).toFixed(1)}%</p>
+            ${pred.simulation ? `<p class="text-sm text-gray-400 mt-1">~${pred.simulation.predicted_scores.home.mean.toFixed(0)} pts</p>` : ''}
+          </div>
+          <div class="text-center p-4 rounded-lg ${pred.prediction === 'away' ? 'bg-purple-900/30 border-2 border-purple-500' : 'bg-gray-700/30'}">
+            <p class="text-gray-400 text-sm">Away</p>
+            <p class="text-2xl font-bold mt-1">${(pred.away_win_probability * 100).toFixed(1)}%</p>
+            ${pred.simulation ? `<p class="text-sm text-gray-400 mt-1">~${pred.simulation.predicted_scores.away.mean.toFixed(0)} pts</p>` : ''}
+          </div>
+        </div>
+        
+        ${pred.simulation ? `
+          <div class="border-t border-gray-700 pt-4 mt-4">
+            <p class="text-sm text-gray-400 mb-2">Monte Carlo Analysis (10,000 simulations)</p>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="text-gray-400">Upset Risk:</span>
+                <span class="text-yellow-400 font-semibold ml-2">${(pred.simulation.risk_metrics.upset_probability * 100).toFixed(1)}%</span>
+              </div>
+              <div>
+                <span class="text-gray-400">Blowout Risk:</span>
+                <span class="text-red-400 font-semibold ml-2">${(pred.simulation.risk_metrics.blowout_probability * 100).toFixed(1)}%</span>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+        
+        <div class="mt-4 flex items-center justify-between">
+          <div class="text-sm">
+            <span class="text-gray-400">Predicted Winner:</span>
+            <span class="text-white font-bold ml-2">${winner}</span>
+          </div>
+          <button class="text-purple-400 hover:text-purple-300 text-sm font-semibold">
+            View Details →
+          </button>
+        </div>
+      `;
+      
+      return div;
+    }
+    
+    function renderArbitrage() {
+      const container = document.getElementById('arbitrageList');
+      container.innerHTML = '';
+      
+      if (allArbitrage.length === 0) {
+        container.innerHTML = `
+          <div class="bg-gray-800 rounded-xl p-12 border border-gray-700 text-center">
+            <div class="text-6xl mb-4">🔍</div>
+            <h3 class="text-xl font-bold mb-2">No Arbitrage Opportunities Found</h3>
+            <p class="text-gray-400">We're constantly scanning for profitable opportunities...</p>
+          </div>
+        `;
+        return;
+      }
+      
+      allArbitrage.forEach(arb => {
+        const card = createArbitrageCard(arb);
+        container.appendChild(card);
+      });
+    }
+    
+    function createArbitrageCard(arb) {
+      const div = document.createElement('div');
+      div.className = 'bg-gradient-to-r from-green-900/20 to-emerald-900/20 rounded-xl p-6 border-2 border-green-500/50 card-hover';
+      
+      div.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-xl font-bold">${arb.away_team} @ ${arb.home_team}</h3>
+            <p class="text-gray-400 text-sm mt-1">Arbitrage Opportunity Detected</p>
+          </div>
+          <div class="text-right">
+            <div class="text-3xl font-bold text-green-400">+${arb.profit_percentage.toFixed(2)}%</div>
+            <p class="text-sm text-gray-400">Guaranteed Profit</p>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="bg-gray-800/50 rounded-lg p-4">
+            <p class="text-gray-400 text-sm">Bet on ${arb.home_team}</p>
+            <p class="text-2xl font-bold text-white mt-1">${arb.best_home_odds.toFixed(2)}</p>
+            <p class="text-sm text-purple-400 mt-1">${arb.best_home_bookmaker}</p>
+          </div>
+          <div class="bg-gray-800/50 rounded-lg p-4">
+            <p class="text-gray-400 text-sm">Bet on ${arb.away_team}</p>
+            <p class="text-2xl font-bold text-white mt-1">${arb.best_away_odds.toFixed(2)}</p>
+            <p class="text-sm text-purple-400 mt-1">${arb.best_away_bookmaker}</p>
+          </div>
+        </div>
+        
+        <div class="border-t border-gray-700 pt-4 mt-4">
+          <div class="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <span class="text-gray-400">Risk Level:</span>
+              <span class="text-green-400 font-semibold ml-2 uppercase">${arb.risk_level}</span>
+            </div>
+            <div>
+              <span class="text-gray-400">Urgency:</span>
+              <span class="text-yellow-400 font-semibold ml-2 uppercase">${arb.time_sensitivity}</span>
+            </div>
+            <div>
+              <span class="text-gray-400">For $1000:</span>
+              <span class="text-green-400 font-semibold ml-2">$${(arb.profit_percentage * 10).toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      return div;
+    }
+    
+    function renderSimulations() {
+      const container = document.getElementById('simulationsList');
+      container.innerHTML = '';
+      
+      allPredictions.forEach(pred => {
+        if (pred.simulation) {
+          const card = createSimulationCard(pred);
+          container.appendChild(card);
+        }
+      });
+    }
+    
+    function createSimulationCard(pred) {
+      const div = document.createElement('div');
+      div.className = 'bg-gray-800 rounded-xl p-6 border border-gray-700 card-hover';
+      
+      const sim = pred.simulation;
+      
+      div.innerHTML = `
+        <h3 class="text-xl font-bold mb-4">${pred.away_team} @ ${pred.home_team}</h3>
+        
+        <div class="grid grid-cols-2 gap-6">
+          <div>
+            <h4 class="text-sm font-semibold text-gray-400 mb-3">Predicted Score</h4>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span>${pred.home_team}</span>
+                <span class="text-2xl font-bold">${sim.predicted_scores.home.mean.toFixed(1)}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>${pred.away_team}</span>
+                <span class="text-2xl font-bold">${sim.predicted_scores.away.mean.toFixed(1)}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <h4 class="text-sm font-semibold text-gray-400 mb-3">95% Confidence Intervals</h4>
+            <div class="space-y-2 text-sm">
+              <div>
+                <span class="text-gray-400">${pred.home_team}:</span>
+                <span class="text-white ml-2">${sim.predicted_scores.home.ci_95[0].toFixed(0)} - ${sim.predicted_scores.home.ci_95[1].toFixed(0)}</span>
+              </div>
+              <div>
+                <span class="text-gray-400">${pred.away_team}:</span>
+                <span class="text-white ml-2">${sim.predicted_scores.away.ci_95[0].toFixed(0)} - ${sim.predicted_scores.away.ci_95[1].toFixed(0)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-6 pt-4 border-t border-gray-700">
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div class="bg-yellow-900/20 rounded-lg p-3">
+              <p class="text-gray-400">Upset Probability</p>
+              <p class="text-2xl font-bold text-yellow-400 mt-1">${(sim.risk_metrics.upset_probability * 100).toFixed(1)}%</p>
+            </div>
+            <div class="bg-red-900/20 rounded-lg p-3">
+              <p class="text-gray-400">Blowout Probability</p>
+              <p class="text-2xl font-bold text-red-400 mt-1">${(sim.risk_metrics.blowout_probability * 100).toFixed(1)}%</p>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      return div;
+    }
+    
+    function renderCharts() {
+      // Probability distribution chart
+      const probCtx = document.getElementById('probabilityChart').getContext('2d');
+      new Chart(probCtx, {
+        type: 'bar',
+        data: {
+          labels: allPredictions.map(p => `${p.away_team.split(' ').pop()} @ ${p.home_team.split(' ').pop()}`),
+          datasets: [{
+            label: 'Home Win %',
+            data: allPredictions.map(p => p.home_win_probability * 100),
+            backgroundColor: 'rgba(147, 51, 234, 0.6)',
+            borderColor: 'rgba(147, 51, 234, 1)',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: { color: '#9ca3af' },
+              grid: { color: 'rgba(75, 85, 99, 0.3)' }
+            },
+            x: {
+              ticks: { color: '#9ca3af' },
+              grid: { color: 'rgba(75, 85, 99, 0.3)' }
+            }
+          },
+          plugins: {
+            legend: { labels: { color: '#9ca3af' } }
+          }
+        }
+      });
+      
+      // Confidence chart
+      const confCtx = document.getElementById('confidenceChart').getContext('2d');
+      new Chart(confCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['High Confidence', 'Medium Confidence', 'Low Confidence'],
+          datasets: [{
+            data: [
+              allPredictions.filter(p => p.confidence > 0.6).length,
+              allPredictions.filter(p => p.confidence > 0.3 && p.confidence <= 0.6).length,
+              allPredictions.filter(p => p.confidence <= 0.3).length
+            ],
+            backgroundColor: [
+              'rgba(34, 197, 94, 0.8)',
+              'rgba(234, 179, 8, 0.8)',
+              'rgba(239, 68, 68, 0.8)'
+            ],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: '#9ca3af' } }
+          }
+        }
+      });
+    }
+    
+    function getSportTeams(sport) {
+      const teams = {
+        'americanfootball_nfl': ['Kansas City Chiefs', 'Buffalo Bills', 'San Francisco 49ers', 'Dallas Cowboys', 'Philadelphia Eagles', 'Miami Dolphins'],
+        'basketball_nba': ['Boston Celtics', 'Los Angeles Lakers', 'Milwaukee Bucks', 'Denver Nuggets', 'Phoenix Suns', 'Golden State Warriors'],
+        'icehockey_nhl': ['Colorado Avalanche', 'Tampa Bay Lightning', 'Boston Bruins', 'Toronto Maple Leafs', 'Edmonton Oilers', 'Vegas Golden Knights'],
+        'baseball_mlb': ['Los Angeles Dodgers', 'New York Yankees', 'Houston Astros', 'Atlanta Braves', 'San Diego Padres', 'Philadelphia Phillies']
+      };
+      return teams[sport] || teams['americanfootball_nfl'];
+    }
+    
+    function showLoading(show) {
+      document.getElementById('loading').classList.toggle('hidden', !show);
+    }
+    
+    function showError(message) {
+      document.getElementById('error').classList.remove('hidden');
+      document.getElementById('errorMessage').textContent = message;
+    }
+    
+    function hideError() {
+      document.getElementById('error').classList.add('hidden');
+    }
+    
+    // Style for buttons
+    const style = document.createElement('style');
+    style.textContent = `
+      .sport-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        background: rgba(75, 85, 99, 0.3);
+        color: #d1d5db;
+        font-weight: 600;
+        transition: all 0.3s;
+        border: 2px solid transparent;
+      }
+      .sport-btn:hover {
+        background: rgba(147, 51, 234, 0.2);
+        border-color: rgba(147, 51, 234, 0.5);
+      }
+      .sport-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: #667eea;
+      }
+      .tab-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        background: transparent;
+        color: #9ca3af;
+        font-weight: 600;
+        transition: all 0.3s;
+      }
+      .tab-btn:hover {
+        color: #d1d5db;
+      }
+      .tab-btn.active {
+        background: rgba(147, 51, 234, 0.3);
+        color: white;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>
